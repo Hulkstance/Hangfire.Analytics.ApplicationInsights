@@ -1,0 +1,25 @@
+root = true
+
+[*]
+charset = utf-8
+indent_size = 4
+indent_style = space
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.cs]
+max_line_length = 184
+csharp_style_expression_bodied_properties = true:warning
+csharp_style_expression_bodied_methods = true:warning
+csharp_style_expression_bodied_constructors = true:warning
+csharp_style_expression_bodied_operators = true:warning
+csharp_style_expression_bodied_accessors = true:warning
+csharp_style_expression_bodied_lambdas = true:warning
+csharp_style_expression_bodied_local_functions = true:warning
+
+[*.{csproj,json,md,nuspec,yml}]
+indent_size = 2
+
+[*.{sln,xml}]
+indent_style = tab

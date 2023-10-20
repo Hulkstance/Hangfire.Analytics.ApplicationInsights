@@ -1,0 +1,1 @@
+# Hangfire.Analytics.ApplicationInsights

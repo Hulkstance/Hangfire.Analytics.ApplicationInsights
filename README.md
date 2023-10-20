@@ -1,4 +1,4 @@
-[![Latest version](https://img.shields.io/nuget/v/Hangfire.Analytics.ApplicationInsights.svg)](https://www.nuget.org/packages/Hangfire.Analytics.ApplicationInsights/) ![GitHub](https://img.shields.io/github/license/Hulkstance/Hangfire.Analytics.ApplicationInsights)
+[![Latest version](https://img.shields.io/nuget/v/Hulkstance.Hangfire.Analytics.ApplicationInsights.svg)](https://www.nuget.org/packages/Hulkstance.Hangfire.Analytics.ApplicationInsights/) ![GitHub](https://img.shields.io/github/license/Hulkstance/Hangfire.Analytics.ApplicationInsights)
 
 # Hangfire.Analytics.ApplicationInsights
 
@@ -17,13 +17,13 @@ Easily integrate Application Insights telemetry with Hangfire jobs for deeper in
 Using NuGet:
 
 ```shell
-Install-Package Hangfire.Analytics.ApplicationInsights
+Install-Package Hulkstance.Hangfire.Analytics.ApplicationInsights
 ```
 
 Or via the .NET CLI:
 
 ```shell
-dotnet add package Hangfire.Analytics.ApplicationInsights
+dotnet add package Hulkstance.Hangfire.Analytics.ApplicationInsights
 ```
 
 # Usage

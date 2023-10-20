@@ -5,6 +5,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  
+  <PropertyGroup>
+    <PackageId>Hulkstance.Hangfire.Analytics.ApplicationInsights</PackageId>
+    <RepositoryUrl>https://github.com/Hulkstance/Hangfire.Analytics.ApplicationInsights</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Hulkstance/Hangfire.Analytics.ApplicationInsights</PackageProjectUrl>
+    <Version>1.0.0</Version>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Hangfire.Core" Version="1.8.6" />

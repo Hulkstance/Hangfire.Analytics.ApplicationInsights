@@ -1,4 +1,6 @@
-[![Latest version](https://img.shields.io/nuget/v/Hulkstance.Hangfire.Analytics.ApplicationInsights.svg)](https://www.nuget.org/packages/Hulkstance.Hangfire.Analytics.ApplicationInsights/) ![GitHub](https://img.shields.io/github/license/Hulkstance/Hangfire.Analytics.ApplicationInsights)
+[![NuGet](https://img.shields.io/nuget/v/Hulkstance.Hangfire.Analytics.ApplicationInsights.svg)](https://www.nuget.org/packages/Hulkstance.Hangfire.Analytics.ApplicationInsights)
+[![NuGet](https://img.shields.io/nuget/dt/Hulkstance.Hangfire.Analytics.ApplicationInsights.svg)](https://www.nuget.org/packages/Hulkstance.Hangfire.Analytics.ApplicationInsights)
+![GitHub](https://img.shields.io/github/license/Hulkstance/Hangfire.Analytics.ApplicationInsights)
 
 # Hangfire.Analytics.ApplicationInsights
 

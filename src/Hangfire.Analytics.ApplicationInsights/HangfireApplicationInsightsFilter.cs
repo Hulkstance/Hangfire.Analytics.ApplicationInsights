@@ -1,53 +1,112 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Concurrent;
+using System.Text.Json;
 using Hangfire.Server;
+using Hangfire.States;
+using Hangfire.Storage;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 
 namespace Hangfire.Analytics.ApplicationInsights;
 
-public sealed class HangfireApplicationInsightsFilter : IServerFilter
+public sealed class HangfireApplicationInsightsFilter : IServerFilter, IApplyStateFilter
 {
+    private static readonly ConcurrentDictionary<string, IOperationHolder<RequestTelemetry>> Operations = new();
+
     private readonly TelemetryClient _telemetryClient;
 
 	public HangfireApplicationInsightsFilter(TelemetryClient telemetryClient) => _telemetryClient = telemetryClient;
 
-	public void OnPerforming(PerformingContext filterContext)
+	public void OnPerforming(PerformingContext context)
 	{
-		var operation = _telemetryClient.StartOperation<RequestTelemetry>(GetJobName(filterContext.BackgroundJob));
-		operation.Telemetry.Properties.Add("JobId", filterContext.BackgroundJob.Id);
-		operation.Telemetry.Properties.Add("Arguments", GetJobArguments(filterContext.BackgroundJob));
+		var operationId = context.BackgroundJob.Id;
+		var operation = _telemetryClient.StartOperation<RequestTelemetry>(GetJobName(context.BackgroundJob), operationId);
+		operation.Telemetry.Properties.Add("JobId", context.BackgroundJob.Id);
+		operation.Telemetry.Properties.Add("JobName", GetJobName(context.BackgroundJob));
+		operation.Telemetry.Properties.Add("JobArguments", GetJobArguments(context.BackgroundJob));
 
-		filterContext.Items["ApplicationInsightsOperation"] = operation;
+		Operations.TryAdd(context.BackgroundJob.Id, operation);
+
+		TrackEvent("Job Started", operation);
 	}
 
-	public void OnPerformed(PerformedContext filterContext)
+	public void OnPerformed(PerformedContext context)
 	{
-		if (filterContext.Items["ApplicationInsightsOperation"] is not IOperationHolder<RequestTelemetry> operation) return;
+		if (Operations.TryRemove(context.BackgroundJob.Id, out var operation))
+		{
+			var exception = context.Exception is JobPerformanceException performanceException ? performanceException.InnerException : context.Exception;
+			TrackEvent(context.Exception != null ? "Job Attempt Failed" : "Job Succeeded", operation, exception);
+			_telemetryClient.StopOperation(operation);
+			operation.Dispose();
+		}
+	}
 
-		if (filterContext.Exception == null || filterContext.ExceptionHandled)
+	public void OnStateApplied(ApplyStateContext context, IWriteOnlyTransaction transaction)
+	{
+		if (context.NewState is FailedState && Operations.TryGetValue(context.BackgroundJob.Id, out var operation))
+		{
+			TrackEvent("Job Failed", operation);
+			_telemetryClient.StopOperation(operation);
+			operation.Dispose();
+			Operations.TryRemove(context.BackgroundJob.Id, out _);
+		}
+	}
+
+	public void OnStateUnapplied(ApplyStateContext context, IWriteOnlyTransaction transaction) { }
+
+    private static string GetJobName(BackgroundJob backgroundJob) => $"{backgroundJob.Job.Type.Name}.{backgroundJob.Job.Method.Name}";
+
+    private static string GetJobArguments(BackgroundJob backgroundJob) => JsonSerializer.Serialize(backgroundJob.Job.Args);
+
+    private void TrackEvent(string eventName, IOperationHolder<RequestTelemetry> operation, Exception? exception = null)
+	{
+		var operationId = operation.Telemetry.Context.Operation.Id;
+		var eventTelemetry = new EventTelemetry(eventName)
+		{
+			Context = { Operation = { Id = operationId, ParentId = operationId } },
+			Properties =
+			{
+				{ "JobId", operation.Telemetry.Properties["JobId"] },
+				{ "JobName", operation.Telemetry.Properties["JobName"] },
+				{ "JobArguments", operation.Telemetry.Properties["JobArguments"] }
+			}
+		};
+
+		if (exception != null)
+		{
+			eventTelemetry.Properties.Add("ErrorMessage", exception.Message);
+			eventTelemetry.Properties.Add("StackTrace", exception.StackTrace);
+
+			var exceptionTelemetry = CreateExceptionTelemetry(operation, exception, operationId);
+			_telemetryClient.TrackException(exceptionTelemetry);
+
+			operation.Telemetry.Success = false;
+			operation.Telemetry.ResponseCode = "Failed";
+		}
+		else
 		{
 			operation.Telemetry.Success = true;
 			operation.Telemetry.ResponseCode = "Success";
 		}
-		else
-		{
-			operation.Telemetry.Success = false;
-			operation.Telemetry.ResponseCode = "Failed";
 
-			var operationId = operation.Telemetry.Context.Operation.Id;
-
-			var exceptionTelemetry = new ExceptionTelemetry(filterContext.Exception);
-			exceptionTelemetry.Context.Operation.Id = operationId;
-			exceptionTelemetry.Context.Operation.ParentId = operationId;
-
-			_telemetryClient.TrackException(exceptionTelemetry);
-		}
-
-		_telemetryClient.StopOperation(operation);
+		_telemetryClient.TrackEvent(eventTelemetry);
 	}
 
-	private static string GetJobName(BackgroundJob backgroundJob) => $"{backgroundJob.Job.Type.Name}.{backgroundJob.Job.Method.Name}";
-
-	private static string GetJobArguments(BackgroundJob backgroundJob) => JsonSerializer.Serialize(backgroundJob.Job.Args);
+    private static ExceptionTelemetry CreateExceptionTelemetry(IOperationHolder<RequestTelemetry> operation, Exception exception, string operationId)
+	{
+		var exceptionTelemetry = new ExceptionTelemetry(exception)
+		{
+			Context = { Operation = { Id = operationId, ParentId = operationId } },
+			SeverityLevel = SeverityLevel.Error,
+			Properties =
+			{
+				{ "JobId", operation.Telemetry.Properties["JobId"] },
+				{ "JobName", operation.Telemetry.Properties["JobName"] },
+				{ "JobArguments", operation.Telemetry.Properties["JobArguments"] },
+				{ "ErrorMessage", exception.Message },
+				{ "StackTrace", exception.StackTrace }
+			}
+		};
+		return exceptionTelemetry;
+	}
 }

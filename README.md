@@ -4,17 +4,15 @@
 
 # Hangfire.Analytics.ApplicationInsights
 
-Easily integrate Application Insights telemetry with Hangfire jobs for deeper insights and monitoring. This library provides a seamless way to track your Hangfire job executions in Application Insights, allowing for detailed analysis, failure tracking, and more.
+Integrates Hangfire with Application Insights for monitoring and analytics. You can easily build metrics dashboards and create alerts in Azure.
 
 ![Example](./example.png)
 
-# Features
+# How it Works
 
-- Automatic telemetry tracking for Hangfire job executions
-- Track job success/failure metrics
-- Get detailed insights into job arguments, execution context, and more
+`Hangfire.Analytics.ApplicationInsights` integrates directly with Hangfire’s job lifecycle by implementing a custom filter that intercepts job execution. This filter tracks job performance metrics, detects exceptions, and records job failure states, logging all this information to Application Insights. This enables developers to monitor job performance, identify failures, and analyze execution patterns using Application Insights’ powerful dashboard.
 
-# Installation
+## Installation
 
 Using NuGet:
 
@@ -28,103 +26,94 @@ Or via the .NET CLI:
 dotnet add package Hulkstance.Hangfire.Analytics.ApplicationInsights
 ```
 
-# Usage
+## Usage
 
-## 1. Registering the telemetry service
+### 1. Register the Hangfire Filter
 
-In your `Program.cs` or wherever you configure services, add the following:
+Add the Hangfire filter to your service collection to begin capturing data from Hangfire job executions:
 
 ```csharp
 services.AddApplicationInsightsTelemetryForHangfire();
 ```
 
-## 2. Configuring Hangfire to use Application Insights
+### 2. Configure Hangfire to Use This Filter
 
-This section guides you on integrating Application Insights telemetry into your Hangfire setup.
+After registering the filter, ensure Hangfire uses this filter by configuring it within your application startup.
 
-### Basic Hangfire Setup
-
-Start by setting up Hangfire as you usually would:
+Normally, you would set up Hangfire like this:
 
 ```csharp
-services.AddHangfire((serviceProvider, globalConfiguration) => globalConfiguration
-	.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
-	.UseRecommendedSerializerSettings()
-	.UseRedisStorage(redisConnectionString, redisStorageOptions)
-	.UseBatches()
-	.UseThrottling(ThrottlingAction.RetryJob, 1.Seconds())
-	.UseTagsWithRedis(new() { TagsListStyle = TagsListStyle.Dropdown }, redisStorageOptions));
+services.AddHangfire(config =>
+    config.UseRedisStorage("<your_connection_string>")
+        // ... other configurations
+);
 ```
 
-## Extending Hangfire with Application Insights Telemetry
-
-To augment Hangfire with Application Insights monitoring, add the `.UseApplicationInsightsTelemetry(serviceProvider)` method to your configuration.
+You can make Hangfire use this filter by adding the following line:
 
 ```csharp
-  // ... other configurations
-  .UseApplicationInsightsTelemetry(serviceProvider);
+services.AddHangfire((serviceProvider, config) => // use this overload to access IServiceProvider
+    config.UseRedisStorage("<your_connection_string>")
+        // ... other configurations
+        .UseApplicationInsightsTelemetry(serviceProvider) // this line
+);
 ```
 
-The above line integrates Application Insights telemetry into Hangfire. It taps into the Hangfire processing pipeline to send telemetry data to Application Insights every time a job is executed.
-
-Here's the combined configuration:
+Alternatively, for a more streamlined approach, particularly when configuring your app's pipeline, use the provided `IApplicationBuilder` extension:
 
 ```csharp
-services.AddHangfire((serviceProvider, globalConfiguration) => globalConfiguration
-  .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
-  .UseRecommendedSerializerSettings()
-  .UseRedisStorage(redisConnectionString, redisStorageOptions)
-  .UseBatches()
-  .UseThrottling(ThrottlingAction.RetryJob, 1.Seconds())
-  .UseTagsWithRedis(new() { TagsListStyle = TagsListStyle.Dropdown }, redisStorageOptions)
-  .UseApplicationInsightsTelemetry(serviceProvider)); // This integrates Application Insights telemetry
+app.UseApplicationInsightsTelemetryForHangfire();
 ```
 
-With this setup, every Hangfire job processed will send telemetry data to Application Insights, giving you a comprehensive view of job performance, failures, and other essential metrics.
+Add this line to your `Program.cs` or within the `Configure` method of your startup class.
 
-# Application Insights Queries
+This setup ensures that all your Hangfire jobs are now tracked in Application Insights, allowing you to view job metrics, identify and investigate failures, and gain deeper insights into your background processes.
 
-Once you've integrated `Hangfire.Analytics.ApplicationInsights`, you can leverage the power of Application Insights to get insights into your Hangfire jobs. Here are a few sample Kusto Query Language (KQL) queries to get you started:
+## Example Application Insights Queries
 
-## View All Hangfire Job Executions
+You can use the following queries as a starting point to analyze and set up alerts for specific conditions related to Hangfire job processing:
+
+### View All Hangfire Job Executions
 
 ```kql
-requests
+customEvents
 | where customDimensions.JobId != ""
-| project timestamp, name, customDimensions.JobId, customDimensions.Arguments, duration, success
+| project timestamp, name, customDimensions
 ```
 
-## View Failed Hangfire Job Executions
+### View Specific Hangfire Job Failures
+
+Create an alert for jobs that fail by matching the event name exactly:
 
 ```kql
-requests
-| where customDimensions.JobId != "" and success == "False"
-| project timestamp, name, customDimensions.JobId, customDimensions.Arguments, duration, resultCode
+customEvents
+| where timestamp > ago(1d) and name == "Job Attempt Failed"
+| project timestamp, name, customDimensions
 ```
 
-## View Job Execution Duration Over Time
+### Monitor Job Failures Over Time
+
+Visualize the frequency of job failures over time to spot trends:
 
 ```kql
-requests
-| where customDimensions.JobId != ""
-| summarize avg(duration) by bin(timestamp, 1h)
+customEvents
+| where name == "Job Attempt Failed"
+| summarize count() by bin(timestamp, 1h)
 | render timechart
 ```
 
-## Count of Jobs by Type
+### Count of Failed Jobs by Type
+
+Identify which job types are failing most often:
 
 ```kql
-requests
-| where customDimensions.JobId != ""
-| summarize count() by tostring(name)
+customEvents
+| where name == "Job Attempt Failed"
+| summarize count() by tostring(customDimensions.JobName)
 | order by count_ desc
 ```
 
 These are just starting points! You can do way more with Application Insights.
-
-# How it Works
-
-Under the hood, `Hangfire.Analytics.ApplicationInsights` uses a Hangfire server filter to intercept job executions. This filter then communicates with Application Insights to log telemetry data. You can then use the Application Insights dashboard to query and analyze this data for more insights into your job execution patterns.
 
 # Contributing
 

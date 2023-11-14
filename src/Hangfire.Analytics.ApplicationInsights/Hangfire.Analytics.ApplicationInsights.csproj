@@ -11,6 +11,8 @@
     <RepositoryUrl>https://github.com/Hulkstance/Hangfire.Analytics.ApplicationInsights</RepositoryUrl>
     <PackageProjectUrl>https://github.com/Hulkstance/Hangfire.Analytics.ApplicationInsights</PackageProjectUrl>
     <Version>1.0.0</Version>
+    <Authors>Hulkstance</Authors>
+    <Description>Integrates Hangfire with Application Insights for monitoring and analytics.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>

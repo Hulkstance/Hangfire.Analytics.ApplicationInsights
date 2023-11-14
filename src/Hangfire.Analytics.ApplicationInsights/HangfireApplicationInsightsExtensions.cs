@@ -1,6 +1,7 @@
 ﻿using Hangfire;
 using Hangfire.Analytics.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.Configuration;
@@ -22,5 +23,14 @@ public static class HangfireApplicationInsightsExtensions
         ArgumentNullException.ThrowIfNull(serviceProvider);
 
         return configuration.UseFilter(serviceProvider.GetRequiredService<HangfireApplicationInsightsFilter>());
+    }
+
+    public static IApplicationBuilder UseApplicationInsightsTelemetryForHangfire(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        GlobalConfiguration.Configuration.UseFilter(app.ApplicationServices.GetRequiredService<HangfireApplicationInsightsFilter>());
+
+        return app;
     }
 }

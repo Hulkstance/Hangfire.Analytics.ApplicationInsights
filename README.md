@@ -115,6 +115,43 @@ customEvents
 
 These are just starting points! You can do way more with Application Insights.
 
+## Example Alert Queries
+
+### Retrieve Latest Failed Job Attempt
+
+For those needing to set up alerts in Azure for Failed Hangfire Jobs, particularly in scenarios where jobs are configured to retry after failure, it's useful to keep only the most recent `Job Attempt Failed` message per `JobId`. This reduces the volume of alerts when a job fails multiple times and attempts retries. Use the following KQL query to retrieve only the latest `Job Attempt Failed` event for each unique job within the last day:
+
+```kql
+customEvents
+| where timestamp > ago(1d) and name == "Job Attempt Failed"
+| extend JobId = tostring(customDimensions['JobId'])
+// Group by JobId and select the latest event for each JobId based on the maximum timestamp
+| summarize arg_max(timestamp, *) by JobId
+| project timestamp, name, customDimensions
+```
+
+To further reduce the noise and focus on significant failures, especially if similar errors tend to occur in quick succession (e.g., within seconds), you can use the following query. It groups the `Job Attempt Failed` events by `JobName` and `ErrorMessage` and retrieves only the most recent event for each combination. This approach is particularly useful when multiple instances of a job fail with the same error message, and you are only interested in being alerted for the last occurrence within the selected time frame.
+
+```kql
+customEvents
+| where timestamp > ago(1d) and name == "Job Attempt Failed"
+| extend JobName = tostring(customDimensions['JobName'])
+| extend ErrorMessage = tostring(customDimensions['ErrorMessage'])
+| extend EventTimestamp = timestamp
+// Group by JobName and ErrorMessage and get the latest timestamp
+| summarize LatestTimestamp=max(EventTimestamp) by JobName, ErrorMessage
+// Get the details of the latest events
+| join kind=inner (
+    customEvents 
+    | where timestamp > ago(1d) and name == "Job Attempt Failed"
+    | extend EventTimestamp = timestamp
+    | project EventTimestamp, name, customDimensions
+) on $left.LatestTimestamp == $right.EventTimestamp
+| project EventTimestamp, name, customDimensions
+```
+
+The second query addresses the problem of receiving multiple alerts for the same error type across job retries. By grouping by `JobName` and `ErrorMessage`, it ensures that only the latest event of a particular error type is considered for alerting, thus minimizing redundant alerts and helping you focus on the most recent and potentially unresolved issues.
+
 # Contributing
 
 Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/Hulkstance/Hangfire.Analytics.ApplicationInsights/issues).

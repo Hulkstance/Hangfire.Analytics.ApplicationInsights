@@ -14,9 +14,18 @@ public sealed class HangfireApplicationInsightsFilter : IServerFilter
 
 	public void OnPerforming(PerformingContext filterContext)
 	{
-		var operation = _telemetryClient.StartOperation<RequestTelemetry>(GetJobName(filterContext.BackgroundJob));
-		operation.Telemetry.Properties.Add("JobId", filterContext.BackgroundJob.Id);
-		operation.Telemetry.Properties.Add("Arguments", GetJobArguments(filterContext.BackgroundJob));
+        var operation = _telemetryClient.StartOperation<RequestTelemetry>(GetJobName(filterContext.BackgroundJob));
+        operation.Telemetry.Properties.Add("JobId", filterContext.BackgroundJob.Id);
+        operation.Telemetry.Properties.Add("JobName", GetJobName(filterContext.BackgroundJob));
+
+        try
+        {
+            operation.Telemetry.Properties.Add("JobArguments", GetJobArguments(filterContext.BackgroundJob));
+        }
+        catch
+        {
+            operation.Telemetry.Properties.Add("JobArguments", "Failed to serialize arguments");
+        }
 
 		filterContext.Items["ApplicationInsightsOperation"] = operation;
 	}
@@ -49,5 +58,5 @@ public sealed class HangfireApplicationInsightsFilter : IServerFilter
 
 	private static string GetJobName(BackgroundJob backgroundJob) => $"{backgroundJob.Job.Type.Name}.{backgroundJob.Job.Method.Name}";
 
-	private static string GetJobArguments(BackgroundJob backgroundJob) => JsonSerializer.Serialize(backgroundJob.Job.Args);
+    private static string GetJobArguments(BackgroundJob backgroundJob) => JsonSerializer.Serialize(backgroundJob.Job.Args?.Where(x => x is not CancellationToken));
 }

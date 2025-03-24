@@ -124,7 +124,7 @@ These are just starting points! You can do way more with Application Insights.
 
 # How it Works
 
-Under the hood, `Hangfire.Analytics.ApplicationInsights` uses a Hangfire server filter to intercept job executions. This filter then communicates with Application Insights to log telemetry data. You can then use the Application Insights dashboard to query and analyze this data for more insights into your job execution patterns.
+Under the hood, all processes in Hangfire are implemented with the Chain of Responsibility pattern, so they can be intercepted. `Hangfire.Analytics.ApplicationInsights` uses an `IServerFilter` to intercept `OnPerforming` and `OnPerformed`. This allows us to extend the original functionality with our logic that communicates telemetry data to Application Insights. The telemetry data can then be queried and analyzed in the Azure Portal.
 
 # Contributing
 

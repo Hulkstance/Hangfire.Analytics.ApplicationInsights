@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net7.0;net6.0</TargetFrameworks>
+    <TargetFrameworks>net9.0;net8.0;net7.0;net6.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -10,19 +10,21 @@
     <PackageId>Hulkstance.Hangfire.Analytics.ApplicationInsights</PackageId>
     <RepositoryUrl>https://github.com/Hulkstance/Hangfire.Analytics.ApplicationInsights</RepositoryUrl>
     <PackageProjectUrl>https://github.com/Hulkstance/Hangfire.Analytics.ApplicationInsights</PackageProjectUrl>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
+    <Authors>Hulkstance</Authors>
+    <Description>Integrates Hangfire with Application Insights for monitoring and analytics.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath=""/>
+    <None Include="../../README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Hangfire.Core" Version="1.8.6"/>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.21.0"/>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0"/>
+    <PackageReference Include="Hangfire.Core" Version="1.8.6" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.21.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
   </ItemGroup>
 
 </Project>
